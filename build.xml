@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="afkvs" default="publish-local" basedir=".">
+    <import file="ivyutil.xml"/>
+
+    <property name="build.dir" value="${root.dir}/build"/>
+    <property name="build.jar.dir" value="${build.dir}/jars"/>
+    <property name="build.classes.dir" value="${build.dir}/classes"/>
+    <property name="build.info.file" value="${build.classes.dir}/${ant.project.name}.properties"/>
+
+    <property name="lib.dir" value="lib"/>
+    <property name="testlib.dir" value="../common/testlib"/>
+
+    <property name="reports.tests" value="build"/>
+    <path id="src.path">
+        <path path="src/java/main"/>
+    </path>
+    <path id="runtime-libs">
+        <fileset dir="${lib.dir}"/>
+        <fileset dir="${ivylib.dir}">
+            <include name="*.jar"/>
+        </fileset>
+    </path>
+    <path id="testsrc.path">
+        <path path="test/java"/>
+    </path>
+    <path id="test-libs">
+        <fileset dir="${testlib.dir}">
+            <include name="*.jar"/>
+        </fileset>
+        <path refid="runtime-libs"/>
+    </path>
+
+    <!-- this target used by publish target in common.xml -->
+    <target name="prep-publish" depends="jars"/>
+    <target name="clean" depends="ivy-clean">
+        <delete includeemptydirs="true" dir="${build.dir}"/>
+    </target>
+
+    <target name="jars"
+            depends="compile">
+        <mkdir dir="${build.jar.dir}"/>
+        <jar destfile="${build.jar.dir}/${ivy.module}.jar"
+             basedir="${build.classes.dir}">
+            <manifest>
+                <attribute name="Jar-Version" value="${ivy.new.revision}"/>
+            </manifest>
+        </jar>
+    </target>
+
+    <target name="compile" depends="ivy-resolve">
+        <mkdir dir="${build.classes.dir}"/>
+        <javac destdir="${build.classes.dir}"
+               debug="true"
+               source="1.5"
+               target="1.5"
+               deprecation="true">
+            <src refid="src.path"/>
+            <classpath refid="runtime-libs"/>
+        </javac>
+    </target>
+
+    <target name="test" depends="compile,compile-test">
+        <junit haltonfailure="yes">
+            <classpath>
+                <path refid="test-libs"/>
+                <dirset dir="${build.classes.dir}"/>
+            </classpath>
+            <formatter type="plain"/>
+            <batchtest fork="yes" todir="${reports.tests}">
+                <fileset refid="testsrc.path">
+                    <include name="**/*Test.java"/>
+                    <exclude name="**/AllTests.java"/>
+                </fileset>
+            </batchtest>
+        </junit>
+    </target>
+
+    <target name="compile-test">
+        <javac destdir="${build.classes.dir}"
+               debug="true"
+               deprecation="true">
+            <src refid="testsrc.path"/>
+            <classpath refid="test-libs"/>
+        </javac>
+    </target>
+</project>

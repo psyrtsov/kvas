@@ -1,0 +1,11 @@
+<ivy-module version="1.0">
+    <info organisation="com.kvas" module="kvas" revision="1.0"/>
+    <publications>
+        <artifact/>
+        <artifact name="${ivy.module}-src" type="source" ext="zip"/>
+    </publications>
+    <dependencies>
+        <dependency org="commons-chain" name="commons-chain" rev="1.2" transitive="false"/>
+        <dependency org="org.slf4j" name="slf4j-api" rev="1.5.10"/>
+    </dependencies>
+</ivy-module>
