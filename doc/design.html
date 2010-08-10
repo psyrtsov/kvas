@@ -1,10 +1,64 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
-        "http://www.w3.org/TR/html4/loose.dtd">
-<html>
-<head>
-    <title></title>
-</head>
-<body>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=windows-1252">
+	<TITLE>Key Value Asynch Store</TITLE>
+</HEAD>
+<BODY LANG="en-US" DIR="LTR">
+<h3>Writing data:</h3>
+<OL>
+	<LI>
+        When data change request comes to Client&nbsp;API&nbsp;it stores changed data in Temp Storage.
+        Also change request gets stored to Persistent Queue.
+	<LI>
+    	Queue Processing Job gets queued update and applies it to data in persistent storage.
+</OL>
 
-</body>
-</html>
+<h3>Reading data:</h3>
+<OL>
+	<LI>
+	    Read request comes to DB Client&nbsp;API&nbsp;, it checks if data for this request available in Temp Storage.
+        If it is then use it, otherwise go to Persistent Store.
+</OL>
+This approach allows to write to distributed DB with speed of writing to persistent queue, which is usually way faster then DB updates. And
+read can be easily scaled by adding additional replicas.
+
+Potential issues with this design.
+<OL>
+	<LI>
+	Temp Storage eventually will start overflowing. It`s hard to get
+	memcached storage capacity as big as Persistent Storage capacity.
+	When it happens DB Client going to fallback to Persistent DB for
+	records that been pushed out of Temp Storage, we need to make sure
+	that Queue Processing is done for the matching queued records.
+
+	<LI>
+	Temp Storage based on memcached is not that reliable and if it goes down
+	we might loose data consistency for short period of time until
+	current data in queue will be propagated to persistent DB. It`s
+	reliability can be improved, but let`s look at what might happen in
+	this scenario. First thing that will happen is that users will
+	temporary loose their changes for records that still in the queue.
+	This might not be that bad considering it&rsquo;ll happen just for
+	short period of time. But if user that already had change waiting in
+	the queue in that moment will submit yet another change to system it
+	might lead to situation wen change will be permanently lost.
+	<LI>
+	This design relies very heavily on Queue Processing job to be reliable
+	and fast enough. So it should be well designed. On other hand this
+	design allows Queue Processing job to be temporarily stopped (for
+	some maintenance tasks) without affecting end user. That is as long
+	as Temporary storage is big enough and job is fast enough to catch
+	up with queued changes later.
+	<LI>
+	Any key value storage this design has difficulty dealing with concurrent
+	updates in same record.&nbsp;<BR>Amazon Dynamo solves this problem
+	at price of eventual consistency. Design in discussion allows to
+	approach this problem differently: If we use user id as part of they
+	key when we store data in memcached we can isolate changes so that
+	user can see only changes made by that user, and when queue
+	processing for that job is done and change is merged into persistent
+	DB we&rsquo;ll have to expire record in memcached.
+</OL>
+</BODY>
+</HTML>

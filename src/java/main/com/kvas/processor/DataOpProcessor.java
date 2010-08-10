@@ -16,7 +16,7 @@
 
 package com.kvas.processor;
 
-import com.kvas.AStore;
+import com.kvas.StoreRouter;
 import com.kvas.queue.DataOp;
 import com.kvas.queue.InMemOpQueue;
 import com.kvas.queue.OpQueue;
@@ -39,13 +39,17 @@ public class DataOpProcessor implements Runnable {
     public void run() {
         //noinspection InfiniteLoopStatement
         while (true) {
-            final DataOp op = queue.poll();
-            try {
-                AStore.setQueueProcessingContext(op);
-                op.apply();
-            } finally {
-                AStore.removeQueueProcessingContext();
-            }
+            processOneItem();
+        }
+    }
+
+    public void processOneItem() {
+        final DataOp op = queue.poll();
+        try {
+            StoreRouter.setQueueProcessingContext(op);
+            op.apply();
+        } finally {
+            StoreRouter.removeQueueProcessingContext();
         }
     }
 
